@@ -134,14 +134,10 @@ public class MainGame : MonoBehaviour
 			{	
 				count++;
 				temp = CurrentActionSet[MaxActions-1];
-				//CurrentActionSet[MaxActions-1] = CurrentActionSet[i];
 				CurrentActionSet[i] = temp;
+				CurrentActionSet[MaxActions-1] = null;
 			}
 		}
-//		for(int c = count; c>0;c--)
-//		{
-//			CurrentActionSet[CurrentActionSet.Length-c] = null;
-//		}
 		actionCount[CurrentTeamNum] -= count;
 	}
 
@@ -199,6 +195,7 @@ public class MainGame : MonoBehaviour
 		Teams[1].Sleep();
 		board.ResetBoard();
 	}
+
 	public int TeamScore(int team)
 	{
 		if (team > 1 || team<0) 
@@ -213,27 +210,26 @@ public class MainGame : MonoBehaviour
 		Teams = new Team[2];
 		int d=0;
 		for(int t = 0; t<2 ; t++)
+		{
+			//bool teamOne = t == 0;
+			Vector3 goal = t == 0 ? board.TeamOneGoal : board.TeamTwoGoal;
+			Teams [t] = new Team (t, TeamColors[t], teamSize, goal, board.GoalSize);
+			//Quaternion face = teamOne ? Quaternion.LookRotation(Vector3.right):Quaternion.LookRotation(-Vector3.right) ;
+			for(int c = 0; c <teamSize; c++)
 			{
-				//bool teamOne = t == 0;
-				Vector3 goal = t == 0 ? board.TeamOneGoal : board.TeamTwoGoal;
-				Teams [t] = new Team (t, TeamColors[t], teamSize, goal, board.GoalSize);
-				//Quaternion face = teamOne ? Quaternion.LookRotation(Vector3.right):Quaternion.LookRotation(-Vector3.right) ;
-				for(int c = 0; c <teamSize; c++)
+				GameObject newGuy = Instantiate(charFab,Vector3.zero + new Vector3((float)t,0.2f,(float)c),Quaternion.identity) as GameObject;
+				Teams [t].AddMate(newGuy.GetComponent<UnitController>());
+				Teams [t].mates [c].team = t;
+				Teams [t].mates [c].charData = positionData [c];
+				newGuy.SetActive (false);
+				if(bDev)
 				{
-					GameObject newGuy = Instantiate(charFab,Vector3.zero + new Vector3((float)t,0.2f,(float)c),Quaternion.identity) as GameObject;
-					Teams [t].AddMate(newGuy.GetComponent<UnitController>());
-					Teams [t].mates [c].team = t;
-					Teams [t].mates [c].charData = positionData [c];
-					newGuy.SetActive (false);
-					if(bDev)
-					{
-						SetCharacterPosition(t,c,devPositions[d]);
-						d++;
-					}
+					SetCharacterPosition(t,c,devPositions[d]);
+					d++;
 				}
 			}
+		}
 	}
-
 
 	public UnitController GetCharacter(int Team, int index)
 	{
@@ -329,6 +325,8 @@ public class MainGame : MonoBehaviour
 	void NextTurn()
 	{
 		ClearActions();
+		actionCount[0] = 0;
+		actionCount[1] = 0;
 		UnityEventManager.TriggerEvent ("NextTurn");
 		turnNumber++;
 		if(!bOnline)

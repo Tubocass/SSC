@@ -7,7 +7,7 @@ public class PlayerAction
 {
 	public UnitController iCh,tCh;
 	public Cell cFrom, cTo;
-	public enum Actions{Move, Block, Tackle, Juke, Pass, Shoot, Cross, Fumble}
+	public enum Actions{Move, Block, Tackle, Juke, Pass, Shoot, Cross, Fumble, Steal}
 	public Actions action; 
 
 	public PlayerAction()

@@ -361,8 +361,6 @@ public class MainGame : MonoBehaviour
 	//The idea is to sort each Player's actions to figure out what will actually happen vs plans. 
 	//Compiled list of acts is then acted upon by both Players
 		Hashtable MoveSet = new Hashtable();
-		//List<Cell> targetedCells = new List<Cell> ();
-		List<Vector3> moveVectors = new List<Vector3>();
 		Debug.Log ("Calculating");
 		int count = 0;
 		for(int k = 0; k<MaxActions; k++)
@@ -377,26 +375,42 @@ public class MainGame : MonoBehaviour
 						{
 							if(characterActions[1][j].action == PlayerAction.Actions.Move)//both moving
 							{
-								Vector point;
-								Vector p = new Vector(characterActions[0][k].cFrom.Location.x,characterActions[0][k].cFrom.Location.z);
-								Vector p2 = new Vector(characterActions[0][k].cTo.Location.x,characterActions[0][k].cTo.Location.z);
-								Vector q = new Vector(characterActions[1][j].cFrom.Location.x,characterActions[1][j].cFrom.Location.z);
-								Vector q2 = new Vector(characterActions[1][j].cTo.Location.x,characterActions[1][j].cTo.Location.z);
-								bool intersect = LineIntersection(p, p2, q, q2, out point);
-								Debug.Log(intersect+ ", "+ point.ToString());
+								Vector3 iCharacterFrom = characterActions[0][k].cFrom.Location, iCharcterTo = characterActions[0][k].cTo.Location;
+								Vector3 oCharcterFrom = characterActions[1][j].cFrom.Location, oCharacterTo = characterActions[1][j].cTo.Location;
+
+								if(characterActions[0][k].iCh.hasBall || characterActions[1][j].iCh.hasBall)
+								{
+									Vector point;//These are 2d vectors used for the LineIntersection function
+									Vector p = new Vector(iCharacterFrom.x, iCharacterFrom.z);
+									Vector p2 = new Vector(iCharcterTo.x, iCharcterTo.z);
+									Vector q = new Vector(oCharcterFrom.x, oCharcterFrom.z);
+									Vector q2 = new Vector(oCharacterTo.x, oCharacterTo.z);
+									bool intersect = LineIntersection(p, p2, q, q2, out point);
+									Debug.Log(intersect+ ", "+ point.ToString());
+									UnitController ballHolder = characterActions[0][k].iCh.hasBall ? characterActions[0][k].iCh: characterActions[1][j].iCh;
+									if(intersect)
+									{
+										bool stealSuccess = (characterActions[1][j].iCh.charData.Strength+Random.Range(1,3)>= characterActions[0][k].iCh.charData.Defense+Random.Range(1,5));
+										Vector3 intersectPoint = new Vector3(point.X, 0.2f, point.Z);
+										characterActions[2][count] = (new PlayerAction(PlayerAction.Actions.Fumble, ballHolder, board.GetCellByLocation(intersectPoint), board.GetCellByLocation(intersectPoint)));
+										characterActions[2][count] = (new PlayerAction(PlayerAction.Actions.Fumble, ballHolder, board.GetCellByLocation(intersectPoint), board.GetCellByLocation(intersectPoint)));
+										count++;
+									}
+								}
+	
 								if(characterActions[0][k].cTo == characterActions[1][j].cTo)
 								{
 									float dist1, dist2;
-									dist1 = (characterActions[0][k].cTo.Location-characterActions[0][k].cFrom.Location).sqrMagnitude/characterActions[0][k].iCh.charData.Speed;// Vector3.Distance(characterActions[0][k].cFrom.Location, characterActions[0][k].cTo.Location);
-									dist2 = (characterActions[1][j].cTo.Location-characterActions[1][j].cFrom.Location).sqrMagnitude/characterActions[1][j].iCh.charData.Speed;
+									dist1 = (iCharcterTo-iCharacterFrom).sqrMagnitude/characterActions[0][k].iCh.charData.Speed;// Vector3.Distance(characterActions[0][k].cFrom.Location, characterActions[0][k].cTo.Location);
+									dist2 = (oCharacterTo-oCharcterFrom).sqrMagnitude/characterActions[1][j].iCh.charData.Speed;
 									if(dist1> dist2)
 									{
-										Cell newCTo = board.GetNearestCellToDestination(characterActions[0][k].cFrom.Location, characterActions[0][k].cTo.Location);
+										Cell newCTo = board.GetNearestCellToDestination(iCharacterFrom, iCharcterTo);
 										characterActions[0][k].cTo = newCTo;
 									}
 									else if(dist1<dist2)
 									{
-										Cell newCTo = board.GetNearestCellToDestination(characterActions[1][j].cFrom.Location, characterActions[1][j].cTo.Location);
+										Cell newCTo = board.GetNearestCellToDestination(oCharcterFrom, oCharacterTo);
 										characterActions[1][j].cTo = newCTo;
 									}else {
 										
@@ -407,10 +421,6 @@ public class MainGame : MonoBehaviour
 					}
 				}
 
-//				if(characterActions[0][k].action == PlayerAction.Actions.Move)
-//				{
-//					moveVectors.Add(characterActions[0][k].cTo-characterActions[0][k].cFrom);
-//				}
 				if(characterActions[0][k].action == PlayerAction.Actions.Tackle)
 				{
 					Cell targetCell = characterActions[0][k].cTo;
@@ -480,146 +490,99 @@ public class MainGame : MonoBehaviour
 		var s = q2-q;
 		var rxs = r.Cross(s);
 		var qpxr = (q-p).Cross(r);
-	// var r = p2 - p;
-    // var s = q2 - q;
-    // var rxs = r.Cross(s);
-    // var qpxr = (q - p).Cross(r);
 
-	// If r x s = 0 and (q - p) x r = 0, then the two lines are collinear.
-    if (rxs.IsZero() && qpxr.IsZero())
-    {
-        // 1. If either  0 <= (q - p) * r <= r * r or 0 <= (p - q) * s <= * s
-        // then the two lines are overlapping,
-       // if (considerCollinearOverlapAsIntersect)
-//            if ((0 <= (q - p)*r && (q - p)*r <= r*r) || (0 <= (p - q)*s && (p - q)*s <= s*s))
-//                return true;
+		// If r x s = 0 and (q - p) x r = 0, then the two lines are collinear.
+	    if (rxs.IsZero() && qpxr.IsZero())
+	    {
+	        // 1. If either  0 <= (q - p) * r <= r * r or 0 <= (p - q) * s <= * s
+	        // then the two lines are overlapping,
+	//        if (considerCollinearOverlapAsIntersect) //Tubocass: Decided not to implement this variable
+	//            if ((0 <= (q - p)*r && (q - p)*r <= r*r) || (0 <= (p - q)*s && (p - q)*s <= s*s))
+	//                return true;
 
-        // 2. If neither 0 <= (q - p) * r = r * r nor 0 <= (p - q) * s <= s * s
-        // then the two lines are collinear but disjoint.
-        // No need to implement this expression, as it follows from the expression above.
-        return false;
-    }
+	        // 2. If neither 0 <= (q - p) * r = r * r nor 0 <= (p - q) * s <= s * s
+	        // then the two lines are collinear but disjoint.
+	        // No need to implement this expression, as it follows from the expression above.
+	        return false;
+	    }
+	    // 3. If r x s = 0 and (q - p) x r != 0, then the two lines are parallel and non-intersecting.
+		if (rxs.IsZero() && !qpxr.IsZero())
+	        return false;
 
+	    // t = (q - p) x s / (r x s)
+		var t = (q-p).Cross(s)/rxs;
+	    // u = (q - p) x r / (r x s)
+		var u = (q-p).Cross(r)/rxs;
 
-    // 3. If r x s = 0 and (q - p) x r != 0, then the two lines are parallel and non-intersecting.
-	if (rxs.IsZero() && !qpxr.IsZero())
-        return false;
-
-    // t = (q - p) x s / (r x s)
-	var t = (q-p).Cross(s)/rxs;
-
-    // u = (q - p) x r / (r x s)
-
-	var u = (q-p).Cross(r)/rxs;
-
-    // 4. If r x s != 0 and 0 <= t <= 1 and 0 <= u <= 1
-    // the two line segments meet at the point p + t r = q + u s.
-	if (!rxs.IsZero() && (0 <= t && t <= 1) && (0 <= u && u <= 1))
-    {
-        // We can calculate the intersection point using either t or u.
-        intersection = p + t*r;
-
-        // An intersection was found.
-        return true;
-    }
-
-    // 5. Otherwise, the two line segments are not parallel but do not intersect.
-    return false;
- 
+	    // 4. If r x s != 0 and 0 <= t <= 1 and 0 <= u <= 1
+	    // the two line segments meet at the point p + t r = q + u s.
+		if (!rxs.IsZero() && (0 <= t && t <= 1) && (0 <= u && u <= 1))
+	    {
+	        // We can calculate the intersection point using either t or u.
+	        intersection = p + t*r;
+	        // An intersection was found.
+	        return true;
+	    }
+	    // 5. Otherwise, the two line segments are not parallel but do not intersect.
+	    return false;
 	}
-	/// <summary>
-    /// Returns the intersection point of the given lines. 
-    /// Returns Empty if the lines do not intersect.
-    /// Source: http://mathworld.wolfram.com/Line-LineIntersection.html
-    /// </summary>
-//	public static Vector2 LineIntersection(Vector2 v1, Vector2 v2, Vector2 v3, Vector2 v4)
-//    {
-//        float tolerance = 0.000001f;
-//
-//        float a = Det2(v1.x - v2.x, v1.y - v2.y, v3.x - v4.x, v3.y - v4.y);
-//		if (Mathf.Abs(a) < float.Epsilon) return Vector2.zero; // Lines are parallel
-//
-//        float d1 = Det2(v1.X, v1.Y, v2.X, v2.Y);
-//        float d2 = Det2(v3.X, v3.Y, v4.X, v4.Y);
-//        float x = Det2(d1, v1.X - v2.X, d2, v3.X - v4.X) / a;
-//        float y = Det2(d1, v1.Y - v2.Y, d2, v3.Y - v4.Y) / a;
-//
-//        if (x < Math.Min(v1.X, v2.X) - tolerance || x > Math.Max(v1.X, v2.X) + tolerance) return PointF.Empty;
-//        if (y < Math.Min(v1.Y, v2.Y) - tolerance || y > Math.Max(v1.Y, v2.Y) + tolerance) return PointF.Empty;
-//        if (x < Math.Min(v3.X, v4.X) - tolerance || x > Math.Max(v3.X, v4.X) + tolerance) return PointF.Empty;
-//        if (y < Math.Min(v3.Y, v4.Y) - tolerance || y > Math.Max(v3.Y, v4.Y) + tolerance) return PointF.Empty;
-//
-//        return new PointF(x, y);
-//    }
-//
-//    /// <summary>
-//    /// Returns the determinant of the 2x2 matrix defined as
-//    /// <list>
-//    /// <item>| x1 x2 |</item>
-//    /// <item>| y1 y2 |</item>
-//    /// </list>
-//    /// </summary>
-//    public static float Det2(float x1, float x2, float y1, float y2)
-//    {
-//        return (x1 * y2 - y1 * x2);
-//    }
 }
 public class Vector
 {
-    public double X;
-    public double Y;
+    public float X;
+	public float Z;
 
     // Constructors.
-    public Vector(double x, double y) { X = x; Y = y; }
-    public Vector() : this(double.NaN, double.NaN) {}
+	public Vector(float x, float y) { X = x; Z = y; }
+	public Vector() : this(float.NaN, float.NaN) {}
 
     public static Vector operator -(Vector v, Vector w)
     {
-        return new Vector(v.X - w.X, v.Y - w.Y);
+        return new Vector(v.X - w.X, v.Z - w.Z);
     }
 
     public static Vector operator +(Vector v, Vector w)
     {
-        return new Vector(v.X + w.X, v.Y + w.Y);
+        return new Vector(v.X + w.X, v.Z + w.Z);
     }
 
     public static double operator *(Vector v, Vector w)
     {
-        return v.X * w.X + v.Y * w.Y;
+        return v.X * w.X + v.Z * w.Z;
     }
 
-    public static Vector operator *(Vector v, double mult)
+	public static Vector operator *(Vector v, float mult)
     {
-        return new Vector(v.X * mult, v.Y * mult);
+        return new Vector(v.X * mult, v.Z * mult);
     }
 
-    public static Vector operator *(double mult, Vector v)
+	public static Vector operator *(float mult, Vector v)
     {
-        return new Vector(v.X * mult, v.Y * mult);
+        return new Vector(v.X * mult, v.Z * mult);
     }
 
      public string ToString()
     {
-    	return X+ ", "+ Y;
+    	return X+ ", "+ Z;
     }
 
-    public double Cross(Vector v)
+	public float Cross(Vector v)
     {
-        return X * v.Y - Y * v.X;
+        return X * v.Z - Z * v.X;
     }
 
     public override bool Equals(object obj)
     {
         var v = (Vector)obj;
-        return (X - v.X).IsZero() && (Y - v.Y).IsZero();
+        return (X - v.X).IsZero() && (Z - v.Z).IsZero();
     }
 }
 public static class Extensions
 {
     private const double Epsilon = 1e-10;
 
-    public static bool IsZero(this double d)
+	public static bool IsZero(this float d)
     {
-        return Mathf.Abs((float)d) < Epsilon;
+        return Mathf.Abs(d) < Epsilon;
     }
 }

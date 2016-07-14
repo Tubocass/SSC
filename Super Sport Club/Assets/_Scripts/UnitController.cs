@@ -34,17 +34,17 @@ public class UnitController : MonoBehaviour
 		get{return tran.position;}
 	}
 	public bool IsSprinting{get{return bSprinting;}}
-	public enum Stance
-	{
-		Neutral,
-		Move,
-		Sprint,
-		Defend,
-		Pass,
-		Shoot,
-		Cover_Man,
-		Cover_Ball
-	};
+//	public enum Stance
+//	{
+//		Neutral,
+//		Move,
+//		Sprint,
+//		Defend,
+//		Pass,
+//		Shoot,
+//		Cover_Man,
+//		Cover_Ball
+//	};
 	protected string easeType;
 	[SerializeField] Vector3 offset = new Vector3(0,0.2f,0);
 	[SerializeField] protected iTween.EaseType ease;
@@ -243,6 +243,10 @@ public class UnitController : MonoBehaviour
 					{
 						break;
 					}
+					case PlayerAction.Actions.Steal:
+					{
+						break;
+					}
 				}
 			}else break;
 		}
@@ -279,46 +283,46 @@ public class UnitController : MonoBehaviour
 		//tran.Rotate(Vector3.up,f);
 	}
 
-	UnitController PlayerInFrontOfMe()
-	{
-		Ray ray = new Ray(tran.position,tran.forward);
-		RaycastHit hit = new RaycastHit();;
-		Physics.Raycast(ray,out hit,rayLength,characterLayer);
-		if(hit.collider!=null&& hit.collider!= this.GetComponent<Collider>() && hit.transform.tag == "Player")
-		{
-			return hit.transform.GetComponent<UnitController>();
-		}
-		return null;
-	}
+//	UnitController PlayerInFrontOfMe()
+//	{
+//		Ray ray = new Ray(tran.position,tran.forward);
+//		RaycastHit hit = new RaycastHit();;
+//		Physics.Raycast(ray,out hit,rayLength,characterLayer);
+//		if(hit.collider!=null&& hit.collider!= this.GetComponent<Collider>() && hit.transform.tag == "Player")
+//		{
+//			return hit.transform.GetComponent<UnitController>();
+//		}
+//		return null;
+//	}
 
-	bool CanMove(Cell targetCell)
-	{
-		bool canMove;
-		opp = PlayerInFrontOfMe();
-		if(opp!=null)
-		{
-			Debug.Log("Player ID: "+opp.id);
-			if(targetCell.Location== opp.Location)
-			{
-				if(targetCell==opp.LastTargetCell)
-				{
-					canMove = false;
-				}else{
-					canMove = true;
-				}
-			}else{
-				float dotFace = Vector3.Dot(tran.forward,opp.transform.forward);
-				if(dotFace<0)//facing each other
-				{
-					Debug.Log("Oh, just kiss already");
-					canMove = false;
-				}else{
-					canMove = true;
-				}
-			}
-		}else canMove = true;
-		return canMove;
-	}
+//	bool CanMove(Cell targetCell) 
+//	{
+//		bool canMove;
+//		opp = PlayerInFrontOfMe();
+//		if(opp!=null)
+//		{
+//			Debug.Log("Player ID: "+opp.id);
+//			if(targetCell.Location== opp.Location)
+//			{
+//				if(targetCell==opp.LastTargetCell)
+//				{
+//					canMove = false;
+//				}else{
+//					canMove = true;
+//				}
+//			}else{
+//				float dotFace = Vector3.Dot(tran.forward,opp.transform.forward);
+//				if(dotFace<0)//facing each other
+//				{
+//					Debug.Log("Oh, just kiss already");
+//					canMove = false;
+//				}else{
+//					canMove = true;
+//				}
+//			}
+//		}else canMove = true;
+//		return canMove;
+//	}
 
 	public void Highlight(bool set)
 	{
@@ -331,14 +335,16 @@ public class UnitController : MonoBehaviour
 		}
 		ShowTargets(set);
 	}
+
 	public void SetColor(Color NewColor)
 	{
 		teamColor = NewColor;
 		currentMesh.material.color = teamColor;
 	}
+
 	void ShowTargets(bool set)
 	{
-	passTargetPin.GetComponent<Renderer>().enabled = set;
+		passTargetPin.GetComponent<Renderer>().enabled = set;
 		foreach (GameObject t in targetPins) 
 		{
 			if(t!=null)
@@ -359,27 +365,34 @@ public class UnitController : MonoBehaviour
 		hasBall = false;
 	}
 
+	void TakeBall(BallScript bs)
+	{
+		ball = bs;
+		Debug.Log ("I gots da ball");
+		ball.BPosessed = true;
+		ball.unitOwner = this;
+		ball.transform.SetParent(this.tran);
+		ball.transform.position = tran.TransformPoint (0, 0, 1);
+		hasBall = true;
+		ball.StopMe ();
+	}
+
 	void OnTriggerEnter(Collider other)
 	{
 		switch(other.tag)
 		{
 			case "Ball":
 			{
-				if (refactory>1f) 
+				BallScript theBall = other.GetComponent<BallScript> ();
+				if (refactory>1f && !theBall.BPosessed) 
 				{
-					ball = other.GetComponent<BallScript> ();
-					ball.BPosessed = true;
-					ball.unitOwner = this;
-					Debug.Log ("I gots da ball");
-					hasBall = true;
-					other.transform.SetParent (tran);
-					other.transform.position = tran.TransformPoint (0, 0, 1);
-					ball.StopMe ();
+					TakeBall(theBall);
 				}
 				break;
 			}
 		}
 	}
+
 	void OnTriggerStay(Collider other)
 	{
 		switch(other.tag)
